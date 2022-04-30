@@ -13,14 +13,16 @@ public class Checker {
         }
     }
 
-    public static boolean isOneDirOneNot(String[] dirs) {
+    public static File getDirToMake(String[] dirs) {
         File dirOne = new File(dirs[0]);
         File dirTwo = new File(dirs[1]);
 
-        if ((dirOne.exists() && dirOne.isDirectory()) || (dirTwo.exists() && dirTwo.isDirectory())) {
-            return true;
+        if (dirOne.exists() && dirOne.isDirectory()) {
+            return dirTwo;
+        } else if(dirTwo.exists() && dirTwo.isDirectory()) {
+            return dirOne;
         } else {
-            return false;
+            return null;
         }
     }
 }

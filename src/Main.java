@@ -7,10 +7,11 @@ public class Main {
             System.out.println("Invalid command. Follow the format: ./sync <dirName1> <dirName2>");
         } else {
             boolean twoDirExist = Checker.doTwoDirsExist(args);
-            boolean oneDirExist = Checker.isOneDirOneNot(args);
+            File dirToMake = Checker.getDirToMake(args);
 
-            if (oneDirExist) {
-                
+            if (dirToMake != null) {
+                dirToMake.mkdir();
+                System.out.println("Directory created");
             }
         }
     }
