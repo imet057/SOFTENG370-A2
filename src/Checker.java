@@ -2,6 +2,12 @@ import java.io.*;
 
 public class Checker {
     
+    /**
+     * Checks if two directories exist
+     * 
+     * @param dirs
+     * @return boolean
+     */
     public static boolean doTwoDirsExist(String[] dirs) {
         File dirOne = new File(dirs[0]);
         File dirTwo = new File(dirs[1]);
@@ -13,6 +19,13 @@ public class Checker {
         }
     }
 
+    /**
+     * Returns the directory to make
+     * Return null if no directory can be made
+     * 
+     * @param dirs
+     * @return File
+     */
     public static File getDirToMake(String[] dirs) {
         File dirOne = new File(dirs[0]);
         File dirTwo = new File(dirs[1]);
