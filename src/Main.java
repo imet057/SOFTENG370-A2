@@ -3,6 +3,8 @@ import java.io.*;
 public class Main {
 
     public static void main(String[] args) {
+        File dirOne, dirTwo;
+
         if (args.length != 2) {
             System.out.println("Invalid command. Follow the format: ./sync <dirName1> <dirName2>");
             return;
@@ -22,8 +24,10 @@ public class Main {
                 }
             }
 
+            dirOne = new File(System.getProperty("user.dir") + "/" + args[0]);
+            dirTwo = new File(System.getProperty("user.dir") + "/" + args[1]);
+
         }
 
-        System.out.println("test");
     }
 }
