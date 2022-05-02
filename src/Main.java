@@ -27,6 +27,7 @@ public class Main {
             dirOne = new File(System.getProperty("user.dir") + "/" + args[0]);
             dirTwo = new File(System.getProperty("user.dir") + "/" + args[1]);
 
+            Syncer.initialSync(dirOne, dirTwo);
         }
 
     }
