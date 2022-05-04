@@ -17,6 +17,7 @@ public class Main {
 
                 // If dirToMake is null then both directories do not exist
                 if (dirToMake != null) {
+                    // Make the missing directory
                     dirToMake.mkdir();
                 } else {
                     System.out.println("Cannot sync: Both of the input directories do not exist");
@@ -24,9 +25,11 @@ public class Main {
                 }
             }
 
+            // Get the path of input directories
             dirOne = new File(System.getProperty("user.dir") + "/" + args[0]);
             dirTwo = new File(System.getProperty("user.dir") + "/" + args[1]);
 
+            // Start syncing
             Syncer.initialSync(dirOne, dirTwo);
         }
 

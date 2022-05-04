@@ -1,4 +1,6 @@
 import java.io.*;
+import java.nio.*;
+import java.nio.file.Files;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -10,8 +12,21 @@ import com.google.gson.stream.JsonReader;
 import com.google.gson.reflect.TypeToken;
 
 public class Syncer {
+
+    public static void initialSync(File dirOne, File dirTwo) {
+        setUpDotSync(dirOne);
+        setUpDotSync(dirTwo);
+        Checker.checkDeletedFiles(dirOne);
+        Checker.checkDeletedFiles(dirTwo);
+
+        merge(dirOne, dirTwo);
+    }
     
     public static void sync(File dirOne, File dirTwo) {
+        setUpDotSync(dirOne);
+        setUpDotSync(dirTwo);
+        Checker.checkDeletedFiles(dirOne);
+        Checker.checkDeletedFiles(dirTwo);
 
     }
 
@@ -46,7 +61,7 @@ public class Syncer {
             Map<String, List<List<String>>> fileStatus = gson.fromJson(jsonReader, collectionType); 
             List<List<String>> pairs = new ArrayList<>();
 
-            date = Utility.getFormattedTime(file);
+            date = Utility.getFormattedTimeOfLastMod(file);
             encoded = Utility.getEncodedString(fileContent);
             pair.add(date);
             pair.add(encoded);
@@ -72,16 +87,57 @@ public class Syncer {
 
                     Utility.writeToDotSync(dotSync, fileStatus);
                 } else if(date != fileStatus.get(fileName).get(0).get(0)) {
-                    file.setLastModified(Utility.getTimeForMod(fileStatus.get(fileName).get(0).get(0)));
+                    file.setLastModified(Utility.getTimeForSettingLastMod(fileStatus.get(fileName).get(0).get(0)));
                 }
             }
         } catch (Exception e) {
         }
     }
 
-    public static void initialSync(File dirOne, File dirTwo) {
-        setUpDotSync(dirOne);
-        setUpDotSync(dirTwo);
+    public static void merge(File dirOne, File dirTwo) {
+        File dotSyncOne = new File(dirOne.getAbsolutePath() + "/.sync");
+        File dotSyncTwo = new File(dirTwo.getAbsolutePath() + "/.sync");
+        
+        for (File dirOneFile : dirOne.listFiles()) {
+            if (!dirOneFile.getName().equals(".sync")) {
+                File sameFileInTwo = new File(dirTwo.getAbsolutePath() + "/" + dirOneFile.getName());
 
+                if (!sameFileInTwo.exists()) {
+                    if (dirOneFile.isFile()) {
+                        try {
+                            Files.copy(dirOneFile.toPath(), sameFileInTwo.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING, 
+                            java.nio.file.StandardCopyOption.COPY_ATTRIBUTES, java.nio.file.LinkOption.NOFOLLOW_LINKS);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+
+                        updateDotSync(dotSyncTwo, sameFileInTwo);
+                    } else if (dirOneFile.isDirectory()) {
+                        sameFileInTwo.mkdir();
+                    }
+                }
+            }
+        }
+
+        for (File dirTwoFile : dirTwo.listFiles()) {
+            if (!dirTwoFile.getName().equals(".sync")) {
+                File sameFileInOne = new File(dirOne.getAbsolutePath() + "/" + dirTwoFile.getName());
+
+                if (!sameFileInOne.exists()) {
+                    if (dirTwoFile.isFile()) {
+                        try {
+                            Files.copy(dirTwoFile.toPath(), sameFileInOne.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING, 
+                            java.nio.file.StandardCopyOption.COPY_ATTRIBUTES, java.nio.file.LinkOption.NOFOLLOW_LINKS);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+
+                        updateDotSync(dotSyncOne, sameFileInOne);
+                    } else if (dirTwoFile.isDirectory()) {
+                        sameFileInOne.mkdir();
+                    }
+                }
+            }          
+        }
     }
 }

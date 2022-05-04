@@ -4,6 +4,8 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -39,8 +41,10 @@ public class Utility {
             String line;
 
             while ((line = br.readLine()) != null) {
-                builder.append(line);   // Might need to add append("\n")
+                builder.append(line).append("\n"); 
             }
+
+            br.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -61,23 +65,30 @@ public class Utility {
         }
     }
 
-    public static String getFormattedTime(File file) {
+    public static String getFormattedTimeOfLastMod(File file) {
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss Z");
 
         return dateFormat.format(new Date(file.lastModified()));
     }
 
-    public static long getTimeForMod(String time) {
+    public static long getTimeForSettingLastMod(String time) {
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss Z");
 
         try {
             Date timeOnSync = dateFormat.parse(time);
-            
+
             return timeOnSync.getTime();
         } catch (ParseException e) {
             e.printStackTrace();
         }
 
         return 0L;
+    }
+
+    public static String getFormattedCurrentTime() {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss Z");
+        ZonedDateTime currentTime = ZonedDateTime.now();
+
+        return currentTime.format(formatter);
     }
 }
