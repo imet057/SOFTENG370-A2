@@ -62,20 +62,17 @@ public class Utility {
     }
 
     public static String getFormattedTime(File file) {
-        SimpleDateFormat dateFormat = new SimpleDateFormat("YYYY-MM-dd HH:mm:ss Z");
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss Z");
 
         return dateFormat.format(new Date(file.lastModified()));
     }
 
     public static long getTimeForMod(String time) {
-        SimpleDateFormat dateFormat = new SimpleDateFormat("YYYY-MM-dd HH:mm:ss Z");
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss Z");
 
         try {
             Date timeOnSync = dateFormat.parse(time);
-
-            System.out.println(time);
-            System.out.println(timeOnSync.toString());
-
+            
             return timeOnSync.getTime();
         } catch (ParseException e) {
             e.printStackTrace();
