@@ -79,4 +79,29 @@ public class Checker {
         } catch (Exception e) {
         }
     }
+
+    public static boolean toBeDeleted(File file, File sameFileInOtherDir, File dir, File otherDir) {
+        File thisDotSync = new File(dir.getAbsolutePath() + "/.sync");
+        File otherDotSync = new File(otherDir.getAbsolutePath() + "/.sync");
+        Map<String, List<List<String>>> fileStatusInDir = Utility.getFileStatus(thisDotSync);
+        Map<String, List<List<String>>> fileStatusInOtherDir = Utility.getFileStatus(otherDotSync);
+
+        if (fileStatusInOtherDir == null) {
+            return false;
+        }
+
+        if (!fileStatusInOtherDir.containsKey(sameFileInOtherDir.getName())) {
+            return false;
+        } 
+
+        if ((fileStatusInDir.get(file.getName()).size() < 2) && (fileStatusInOtherDir.get(sameFileInOtherDir.getName()).get(0).get(1).equals("deleted"))) {
+            return true;
+        }
+
+        if ((!fileStatusInDir.get(file.getName()).get(1).get(1).equals("deleted")) && (fileStatusInOtherDir.get(sameFileInOtherDir.getName()).get(0).get(1).equals("deleted"))) {
+            return true;
+        } else {
+            return false;
+        }
+    }
 }

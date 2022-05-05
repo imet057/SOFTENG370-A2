@@ -117,9 +117,14 @@ public class Syncer {
 
                 if (!sameFileInOtherDir.exists()) {
                     if (fileInDir.isFile()) {
-                        Utility.copyFile(fileInDir, sameFileInOtherDir);
-
-                        updateDotSync(dotSync, sameFileInOtherDir);
+                        if (Checker.toBeDeleted(fileInDir, sameFileInOtherDir, dir, otherDir)) {
+                            File dotSyncInDir = new File(dir.getAbsolutePath() + "/.sync");
+                            fileInDir.delete();
+                            Utility.addDeleteEntry(fileInDir, dotSyncInDir);
+                        } else {
+                            Utility.copyFile(fileInDir, sameFileInOtherDir);
+                            updateDotSync(dotSync, sameFileInOtherDir);
+                        }
                     } else if (fileInDir.isDirectory()) {
                         sameFileInOtherDir.mkdir();
                     }
@@ -180,11 +185,16 @@ public class Syncer {
                 }
         } else if ((pairsOfFileOne.get(0).get(1).equals(pairsOfFileTwo.get(0).get(1))) &&
         (pairsOfFileOne.get(0).get(0).equals(pairsOfFileTwo.get(0).get(0)))) {
-            return;
+            return; // If two files are exactly the same, don't do anything
         } else {
             boolean fileOneOlderVer = Utility.isOlderVersion(pairsOfFileOne.get(0).get(1), pairsOfFileTwo);
             boolean fileTwoOlderVer = Utility.isOlderVersion(pairsOfFileTwo.get(0).get(1), pairsOfFileOne);
 
+            // If a file has different digests in both directories then the files are different. This must be handled in a number
+            // of ways. If the current digest of one of the versions is the same as an earlier digest in the other version then
+            // this version has been superseded (see the assumptions). The older version of the file needs to be replaced by
+            // the more recent version and the sync file entry updated. The copied version of the file must be given the
+            // modification time specified in the updated sync file.
             if (fileOneOlderVer) {
                 Utility.copyFile(files[1], files[0]);
                 pairsOfFileOne.add(0, pairsOfFileTwo.get(0));
@@ -198,10 +208,11 @@ public class Syncer {
 
                 Utility.writeToDotSync(dotSyncs[1], fileStatusDirTwo);
             } else {
+                // If both digests are unique (this can happen legitimately when the program is first run) then we have two
+                // different possible versions of the file.  In this assignment you should use the modified times 
+                // to identify the most recent version of the file in this situation. 
+
                 List<String> newPair = new ArrayList<>();
-
-                System.out.println("working" + Arrays.toString(files));
-
 
                 if (fileOneModTime.after(fileTwoModTime)) {
                     Utility.copyFile(files[0], files[1]);

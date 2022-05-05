@@ -113,7 +113,6 @@ public class Utility {
     public static Map<String, List<List<String>>> getFileStatus(File dotSync) {
         Type collectionType = new TypeToken<Map<String, List<List<String>>>>(){}.getType();
         Gson gson = new Gson();
-        List<List<String>> pairs = new ArrayList<>();
 
         try {
             JsonReader jsonReader = new JsonReader(new FileReader(dotSync));
@@ -150,6 +149,19 @@ public class Utility {
         }
 
         return false;
+    }
+
+    public static void addDeleteEntry(File file, File dotSync) {
+        Map<String, List<List<String>>> fileStatus = getFileStatus(dotSync);
+        List<List<String>> pairs = getPairsOfFileFromDotSync(file, dotSync);
+        List<String> newPair = new ArrayList<>();
+
+        newPair.add(getFormattedCurrentTime());
+        newPair.add("deleted");
+        pairs.add(0, newPair);
+        fileStatus.put(file.getName(), pairs);
+
+        writeToDotSync(dotSync, fileStatus);
     }
 
 }
