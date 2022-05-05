@@ -1,17 +1,22 @@
 import java.io.*;
+import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.reflect.TypeToken;
+import com.google.gson.stream.JsonReader;
 
 public class Utility {
     
@@ -71,18 +76,22 @@ public class Utility {
         return dateFormat.format(new Date(file.lastModified()));
     }
 
-    public static long getTimeForSettingLastMod(String time) {
+    public static Date parseTimeFromString(String time) {
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss Z");
+        Date timeDateObj;
 
         try {
-            Date timeOnSync = dateFormat.parse(time);
-
-            return timeOnSync.getTime();
+            timeDateObj = dateFormat.parse(time);
+            return timeDateObj;
         } catch (ParseException e) {
             e.printStackTrace();
         }
 
-        return 0L;
+        return null;
+    }
+
+    public static long getTimeForSettingLastMod(String time) {
+        return parseTimeFromString(time).getTime();
     }
 
     public static String getFormattedCurrentTime() {
@@ -91,4 +100,56 @@ public class Utility {
 
         return currentTime.format(formatter);
     }
+
+    public static void copyFile(File fileToCopy, File dest) {
+        try {
+            Files.copy(fileToCopy.toPath(), dest.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING, 
+            java.nio.file.StandardCopyOption.COPY_ATTRIBUTES, java.nio.file.LinkOption.NOFOLLOW_LINKS);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static Map<String, List<List<String>>> getFileStatus(File dotSync) {
+        Type collectionType = new TypeToken<Map<String, List<List<String>>>>(){}.getType();
+        Gson gson = new Gson();
+        List<List<String>> pairs = new ArrayList<>();
+
+        try {
+            JsonReader jsonReader = new JsonReader(new FileReader(dotSync));
+            Map<String, List<List<String>>> fileStatus = gson.fromJson(jsonReader, collectionType);
+
+            return fileStatus;
+        } catch (Exception e) {
+        }
+
+        return null;
+    }
+
+    public static List<List<String>> getPairsOfFileFromDotSync(File file, File dotSync) {
+        Type collectionType = new TypeToken<Map<String, List<List<String>>>>(){}.getType();
+        Gson gson = new Gson();
+        List<List<String>> pairs = new ArrayList<>();
+
+        try {
+            JsonReader jsonReader = new JsonReader(new FileReader(dotSync));
+            Map<String, List<List<String>>> fileStatus = gson.fromJson(jsonReader, collectionType);
+
+            pairs = fileStatus.get(file.getName());
+        } catch (Exception e) {
+        }
+
+        return pairs;
+    }
+
+    public static boolean isOlderVersion(String currrentDigest, List<List<String>> pairsOfOtherFile) {
+        for (int i = 1; i < pairsOfOtherFile.size(); i++) {
+            if (currrentDigest.equals(pairsOfOtherFile.get(i).get(1))) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
 }

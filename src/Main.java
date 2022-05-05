@@ -30,7 +30,7 @@ public class Main {
             dirTwo = new File(System.getProperty("user.dir") + "/" + args[1]);
 
             // Start syncing
-            Syncer.initialSync(dirOne, dirTwo);
+            Syncer.merge(dirOne, dirTwo);
         }
 
     }

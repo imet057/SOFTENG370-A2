@@ -3,6 +3,8 @@ import java.nio.*;
 import java.nio.file.Files;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -12,22 +14,21 @@ import com.google.gson.stream.JsonReader;
 import com.google.gson.reflect.TypeToken;
 
 public class Syncer {
-
-    public static void initialSync(File dirOne, File dirTwo) {
-        setUpDotSync(dirOne);
-        setUpDotSync(dirTwo);
-        Checker.checkDeletedFiles(dirOne);
-        Checker.checkDeletedFiles(dirTwo);
-
-        merge(dirOne, dirTwo);
-    }
     
-    public static void sync(File dirOne, File dirTwo) {
+    public static void merge(File dirOne, File dirTwo) {
         setUpDotSync(dirOne);
         setUpDotSync(dirTwo);
         Checker.checkDeletedFiles(dirOne);
         Checker.checkDeletedFiles(dirTwo);
 
+        sync(dirOne, dirTwo);
+
+        for (File subDir : dirOne.listFiles()) {
+            if (subDir.isDirectory()) {
+                File subDirInOtherDir = new File(dirTwo.getAbsolutePath() + "/" + subDir.getName());
+                merge(subDir, subDirInOtherDir);
+            }
+        }
     }
 
     public static void setUpDotSync(File dir) {
@@ -94,50 +95,136 @@ public class Syncer {
         }
     }
 
-    public static void merge(File dirOne, File dirTwo) {
+    public static void sync(File dirOne, File dirTwo) {
         File dotSyncOne = new File(dirOne.getAbsolutePath() + "/.sync");
         File dotSyncTwo = new File(dirTwo.getAbsolutePath() + "/.sync");
         
-        for (File dirOneFile : dirOne.listFiles()) {
-            if (!dirOneFile.getName().equals(".sync")) {
-                File sameFileInTwo = new File(dirTwo.getAbsolutePath() + "/" + dirOneFile.getName());
+        syncLogic(dirOne, dirTwo, dotSyncTwo);
+        syncLogic(dirTwo, dirOne, dotSyncOne);
+    }
 
-                if (!sameFileInTwo.exists()) {
-                    if (dirOneFile.isFile()) {
-                        try {
-                            Files.copy(dirOneFile.toPath(), sameFileInTwo.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING, 
-                            java.nio.file.StandardCopyOption.COPY_ATTRIBUTES, java.nio.file.LinkOption.NOFOLLOW_LINKS);
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
+    /**
+     * Peforms sync between two files
+     * 
+     * @param dir
+     * @param otherDir
+     * @param dotSync
+     */
+    public static void syncLogic(File dir, File otherDir, File dotSync) {
+        for (File fileInDir : dir.listFiles()) {
+            if (!fileInDir.getName().equals(".sync")) {
+                File sameFileInOtherDir = new File(otherDir.getAbsolutePath() + "/" + fileInDir.getName());
 
-                        updateDotSync(dotSyncTwo, sameFileInTwo);
-                    } else if (dirOneFile.isDirectory()) {
-                        sameFileInTwo.mkdir();
+                if (!sameFileInOtherDir.exists()) {
+                    if (fileInDir.isFile()) {
+                        Utility.copyFile(fileInDir, sameFileInOtherDir);
+
+                        updateDotSync(dotSync, sameFileInOtherDir);
+                    } else if (fileInDir.isDirectory()) {
+                        sameFileInOtherDir.mkdir();
+                    }
+                } else {
+                    if (!fileInDir.isDirectory()) {
+                        File[] files = {fileInDir, sameFileInOtherDir};
+                        File[] dirs = {dir, otherDir};
+                        File[] dotSyncs = {new File(dir.getAbsolutePath() + "/.sync"), dotSync};
+
+                        syncTwoExistingFile(files, dirs, dotSyncs);
                     }
                 }
             }
         }
+    }
 
-        for (File dirTwoFile : dirTwo.listFiles()) {
-            if (!dirTwoFile.getName().equals(".sync")) {
-                File sameFileInOne = new File(dirOne.getAbsolutePath() + "/" + dirTwoFile.getName());
+    /**
+     * Method that syncs two existing files that have the same file name and extension
+     * 
+     * @param files
+     * @param dirs
+     * @param dotSyncs
+     */
+    public static void syncTwoExistingFile(File[] files, File[] dirs, File[] dotSyncs) {
+        Map<String, List<List<String>>> fileStatusDirOne = Utility.getFileStatus(dotSyncs[0]);
+        Map<String, List<List<String>>> fileStatusDirTwo = Utility.getFileStatus(dotSyncs[1]);
+        List<List<String>> pairsOfFileOne = Utility.getPairsOfFileFromDotSync(files[0], dotSyncs[0]);
+        List<List<String>> pairsOfFileTwo = Utility.getPairsOfFileFromDotSync(files[1], dotSyncs[1]);
+        Date fileOneModTime = Utility.parseTimeFromString(pairsOfFileOne.get(0).get(0));
+        Date fileTwoModTime = Utility.parseTimeFromString(pairsOfFileTwo.get(0).get(0));
 
-                if (!sameFileInOne.exists()) {
-                    if (dirTwoFile.isFile()) {
-                        try {
-                            Files.copy(dirTwoFile.toPath(), sameFileInOne.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING, 
-                            java.nio.file.StandardCopyOption.COPY_ATTRIBUTES, java.nio.file.LinkOption.NOFOLLOW_LINKS);
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
+        // If a file has the same current digest in both directories but different modification dates, the earliest
+        // modification date (from one of the sync files) is applied to both versions of the file, and the sync file entry is
+        // updated to reflect this.
+        if ((pairsOfFileOne.get(0).get(1).equals(pairsOfFileTwo.get(0).get(1))) &&
+            !(pairsOfFileOne.get(0).get(0).equals(pairsOfFileTwo.get(0).get(0)))) {
+                List<String> newPair = new ArrayList<>();
+                
+                // If file one's mod time is later
+                if (fileOneModTime.after(fileTwoModTime)) {
+                    newPair.add(pairsOfFileTwo.get(0).get(0));
+                    newPair.add(pairsOfFileOne.get(0).get(1));
+                    pairsOfFileOne.add(0, newPair);
 
-                        updateDotSync(dotSyncOne, sameFileInOne);
-                    } else if (dirTwoFile.isDirectory()) {
-                        sameFileInOne.mkdir();
-                    }
+                    files[0].setLastModified(fileTwoModTime.getTime());
+                    fileStatusDirOne.put(files[0].getName(), pairsOfFileOne);
+
+                    Utility.writeToDotSync(dotSyncs[0], fileStatusDirOne);
+                } else {
+                    newPair.add(pairsOfFileOne.get(0).get(0));
+                    newPair.add(pairsOfFileTwo.get(0).get(1));
+                    pairsOfFileTwo.add(0, newPair);
+
+                    files[1].setLastModified(fileOneModTime.getTime());
+                    fileStatusDirTwo.put(files[1].getName(), pairsOfFileTwo);
+
+                    Utility.writeToDotSync(dotSyncs[1], fileStatusDirTwo);
                 }
-            }          
+        } else if ((pairsOfFileOne.get(0).get(1).equals(pairsOfFileTwo.get(0).get(1))) &&
+        (pairsOfFileOne.get(0).get(0).equals(pairsOfFileTwo.get(0).get(0)))) {
+            return;
+        } else {
+            boolean fileOneOlderVer = Utility.isOlderVersion(pairsOfFileOne.get(0).get(1), pairsOfFileTwo);
+            boolean fileTwoOlderVer = Utility.isOlderVersion(pairsOfFileTwo.get(0).get(1), pairsOfFileOne);
+
+            if (fileOneOlderVer) {
+                Utility.copyFile(files[1], files[0]);
+                pairsOfFileOne.add(0, pairsOfFileTwo.get(0));
+                fileStatusDirOne.put(files[0].getName(), pairsOfFileOne);
+
+                Utility.writeToDotSync(dotSyncs[0], fileStatusDirOne);
+            } else if (fileTwoOlderVer) {
+                Utility.copyFile(files[0], files[1]);
+                pairsOfFileTwo.add(0, pairsOfFileOne.get(0));
+                fileStatusDirTwo.put(files[1].getName(), pairsOfFileTwo);
+
+                Utility.writeToDotSync(dotSyncs[1], fileStatusDirTwo);
+            } else {
+                List<String> newPair = new ArrayList<>();
+
+                System.out.println("working" + Arrays.toString(files));
+
+
+                if (fileOneModTime.after(fileTwoModTime)) {
+                    Utility.copyFile(files[0], files[1]);
+                    newPair.add(pairsOfFileOne.get(0).get(0));
+                    newPair.add(pairsOfFileOne.get(0).get(1));
+                    pairsOfFileTwo.add(0, newPair);
+
+                    files[1].setLastModified(fileOneModTime.getTime());
+                    fileStatusDirTwo.put(files[1].getName(), pairsOfFileTwo);
+
+                    Utility.writeToDotSync(dotSyncs[1], fileStatusDirTwo);
+                } else {
+                    Utility.copyFile(files[1], files[0]);
+                    newPair.add(pairsOfFileTwo.get(0).get(0));
+                    newPair.add(pairsOfFileTwo.get(0).get(1));
+                    pairsOfFileOne.add(0, newPair);
+
+                    files[0].setLastModified(fileTwoModTime.getTime());
+                    fileStatusDirOne.put(files[0].getName(), pairsOfFileOne);
+
+                    Utility.writeToDotSync(dotSyncs[0], fileStatusDirOne);
+                }
+            }
         }
     }
 }
