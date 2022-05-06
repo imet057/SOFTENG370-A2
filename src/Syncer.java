@@ -1,9 +1,6 @@
 import java.io.*;
-import java.nio.*;
-import java.nio.file.Files;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -13,8 +10,23 @@ import com.google.gson.Gson;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.reflect.TypeToken;
 
+/**
+ * A class that performs the sync function
+ * 
+ * Author: Issei Metoki
+ * UPI: imet057
+ */
+
 public class Syncer {
     
+    /**
+     * This method first sets up the sync file in the passed in directories
+     * Then syncs the passed in directories
+     * Then recursively syncs subdirectories
+     * 
+     * @param dirOne
+     * @param dirTwo
+     */
     public static void merge(File dirOne, File dirTwo) {
         setUpDotSync(dirOne);
         setUpDotSync(dirTwo);
@@ -31,6 +43,12 @@ public class Syncer {
         }
     }
 
+    /**
+     * This method makes the sync file if it is not already present in the directory
+     * Then calls other method to update the sync file 
+     * 
+     * @param dir
+     */
     public static void setUpDotSync(File dir) {
         File dotSync = new File(dir.getAbsolutePath() + "/.sync");
 
@@ -48,6 +66,12 @@ public class Syncer {
         }
     }
 
+    /**
+     * This method updates the sync file
+     * 
+     * @param dotSync
+     * @param file
+     */
     public static void updateDotSync(File dotSync, File file) {
         String fileName = file.getName();
         String fileContent = Utility.readFile(file);
@@ -67,6 +91,7 @@ public class Syncer {
             pair.add(date);
             pair.add(encoded);
 
+            // If there is no entry in sync file
             if (fileStatus == null) {
                 Map<String, List<List<String>>> temp = new HashMap<String, List<List<String>>>();
 
@@ -76,11 +101,13 @@ public class Syncer {
 
                 Utility.writeToDotSync(dotSync, fileStatus);
             } else if (!fileStatus.containsKey(fileName)) {
+                // If the sync file does not have the file entry in it
                 pairs.add(pair);
                 fileStatus.put(fileName, pairs);
 
                 Utility.writeToDotSync(dotSync, fileStatus);
             }else {
+                // If the current file does not have the same digest as the most recent digest 
                 if (!encoded.equals(fileStatus.get(fileName).get(0).get(1))) {
                     pairs = fileStatus.get(fileName);
                     pairs.add(0, pair);
@@ -88,6 +115,7 @@ public class Syncer {
 
                     Utility.writeToDotSync(dotSync, fileStatus);
                 } else if(date != fileStatus.get(fileName).get(0).get(0)) {
+                    // If the file content is the same as before but modified date changed
                     file.setLastModified(Utility.getTimeForSettingLastMod(fileStatus.get(fileName).get(0).get(0)));
                 }
             }
@@ -95,6 +123,12 @@ public class Syncer {
         }
     }
 
+    /**
+     * This method is the entry point of syncing two directories
+     * 
+     * @param dirOne
+     * @param dirTwo
+     */
     public static void sync(File dirOne, File dirTwo) {
         File dotSyncOne = new File(dirOne.getAbsolutePath() + "/.sync");
         File dotSyncTwo = new File(dirTwo.getAbsolutePath() + "/.sync");
@@ -104,7 +138,8 @@ public class Syncer {
     }
 
     /**
-     * Peforms sync between two files
+     * This method iterate through each file in the directory and sync them with the 
+     * same signature file in the other directory
      * 
      * @param dir
      * @param otherDir

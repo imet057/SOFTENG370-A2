@@ -6,10 +6,17 @@ import com.google.gson.Gson;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.reflect.TypeToken;
 
+/**
+ * A class that checks certain conditions
+ * 
+ * Author: Issei Metoki
+ * UPI: imet057
+ */
+
 public class Checker {
     
     /**
-     * Checks if two directories exist from input
+     * Checks if the input directories exist 
      * 
      * @param dirs
      * @return boolean
@@ -26,7 +33,7 @@ public class Checker {
     }
 
     /**
-     * Returns the directory to make using input directories
+     * Returns the directory to make
      * Return null if no directory can be made
      * 
      * @param dirs
@@ -45,6 +52,12 @@ public class Checker {
         }
     }
 
+    /**
+     * Checks if some files got deleted prior to the sync
+     * and updates the sync file
+     * 
+     * @param dir
+     */
     public static void checkDeletedFiles(File dir) {
         File dotSync = new File(dir.getAbsolutePath() + "/.sync");
         Type collectionType = new TypeToken<Map<String, List<List<String>>>>(){}.getType();
@@ -52,7 +65,6 @@ public class Checker {
         String date;
         String deleted = "deleted";
         List<List<String>> pairs = new ArrayList<>();
-        List<String> pair = new ArrayList<>();
 
         try {
             JsonReader jsonReader = new JsonReader(new FileReader(dotSync));
@@ -62,6 +74,7 @@ public class Checker {
                 String fileName = entry.getKey();
                 List<List<String>> json = entry.getValue();
                 File file = new File(dir.getAbsolutePath() + "/" + fileName);
+                List<String> pair = new ArrayList<>();
 
                 if ((!file.exists()) && (!json.get(0).get(1).equals(deleted))) {
                     pairs = fileStatus.get(fileName);
@@ -80,6 +93,16 @@ public class Checker {
         }
     }
 
+    /**
+     * This method is called when a file exists in one directory but not in the other directory
+     * This method determines if the file is to be deleted or to be copied in the other directory
+     * 
+     * @param file
+     * @param sameFileInOtherDir
+     * @param dir
+     * @param otherDir
+     * @return
+     */
     public static boolean toBeDeleted(File file, File sameFileInOtherDir, File dir, File otherDir) {
         File thisDotSync = new File(dir.getAbsolutePath() + "/.sync");
         File otherDotSync = new File(otherDir.getAbsolutePath() + "/.sync");

@@ -1,10 +1,18 @@
 import java.io.*;
 
+/**
+ * Entry point of sync program
+ * 
+ * Author: Issei Metoki
+ * UPI: imet057
+ */
+
 public class Main {
 
     public static void main(String[] args) {
         File dirOne, dirTwo;
 
+        // Incorrect input format
         if (args.length != 2) {
             System.out.println("Invalid command. Follow the format: ./sync <dirName1> <dirName2>");
             return;
